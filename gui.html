@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VersionVault - Web Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .branch-indicator {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .toolbar {
+            background: #f7fafc;
+            padding: 20px 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-init { background: linear-gradient(135deg, #48bb78, #38a169); }
+        .btn-add { background: linear-gradient(135deg, #4299e1, #3182ce); }
+        .btn-commit { background: linear-gradient(135deg, #9f7aea, #805ad5); }
+        .btn-branch { background: linear-gradient(135deg, #ed8936, #dd6b20); }
+        .btn-log { background: linear-gradient(135deg, #718096, #4a5568); }
+        .btn-refresh { background: linear-gradient(135deg, #48bb78, #38a169); }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f7fafc;
+            border-right: 2px solid #e2e8f0;
+            padding: 20px;
+        }
+
+        .sidebar h3 {
+            font-size: 16px;
+            color: #2d3748;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cbd5e0;
+        }
+
+        .file-list {
+            list-style: none;
+        }
+
+        .file-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-item:hover {
+            background: #edf2f7;
+            border-left-color: #4299e1;
+            transform: translateX(5px);
+        }
+
+        .file-item.selected {
+            background: #bee3f8;
+            border-left-color: #3182ce;
+        }
+
+        .file-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .output-area {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: #718096;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #4299e1;
+            border-bottom-color: #4299e1;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-box, .log-box {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 400px;
+            overflow-y: auto;
+        }
+
+        .commit-entry {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .commit-hash {
+            color: #f6ad55;
+            font-weight: bold;
+        }
+
+        .commit-author {
+            color: #68d391;
+        }
+
+        .commit-date {
+            color: #90cdf4;
+            font-size: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .branch-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .branch-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .branch-item:hover {
+            background: #edf2f7;
+            border-left-color: #4299e1;
+        }
+
+        .branch-item.current {
+            background: #bee3f8;
+            border-left-color: #3182ce;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #38a169;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 VersionVault</h1>
+            <div class="branch-indicator" id="branchIndicator">
+                📍 No Repository Loaded
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-init" onclick="initRepository()">
+                ⚡ Initialize Repository
+            </button>
+            <button class="btn btn-add" onclick="addFiles()" id="addBtn" disabled>
+                ➕ Add Files
+            </button>
+            <button class="btn btn-commit" onclick="showCommitModal()" id="commitBtn" disabled>
+                💾 Commit
+            </button>
+            <button class="btn btn-branch" onclick="showBranchModal()" id="branchBtn" disabled>
+                🌿 Branches
+            </button>
+            <button class="btn btn-log" onclick="viewLog()" id="logBtn" disabled>
+                📜 View Log
+            </button>
+            <button class="btn btn-refresh" onclick="refreshView()" id="refreshBtn" disabled>
+                🔄 Refresh
+            </button>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>📁 Working Directory</h3>
+                <ul class="file-list" id="fileList">
+                    <li class="file-item">
+                        <span class="file-icon">📄</span>
+                        README.md
+                    </li>
+                    <li class="file-item">
+                        <span class="file-icon">📄</span>
+                        test.txt
+                    </li>
+                    <li class="file-item">
+                        <span class="file-icon">📄</span>
+                        main.java
+                    </li>
+                    <li class="file-item">
+                        <span class="file-icon">📄</span>
+                        config.json
+                    </li>
+                </ul>
+            </div>
+
+            <div class="output-area">
+                <div class="success-message" id="successMessage"></div>
+
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('status')">Status</button>
+                    <button class="tab" onclick="switchTab('log')">Commit Log</button>
+                </div>
+
+                <div class="tab-content active" id="status-tab">
+                    <div class="status-box" id="statusBox">
+                        <div style="color: #90cdf4;">On branch: main</div>
+                        <br>
+                        <div style="color: #68d391;">Changes to be committed:</div>
+                        <div style="padding-left: 20px; color: #f6ad55;">
+                            modified: README.md<br>
+                            modified: test.txt
+                        </div>
+                        <br>
+                        <div style="color: #fbd38d;">Working tree clean</div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="log-tab">
+                    <div class="log-box" id="logBox">
+                        <div class="commit-entry">
+                            <div class="commit-hash">commit a1b2c3d4e5f6</div>
+                            <div class="commit-author">Author: John Doe &lt;john@example.com&gt;</div>
+                            <div class="commit-date">Date: 2024-11-24 10:30:00</div>
+                            <br>
+                            <div style="padding-left: 20px;">Initial commit with project files</div>
+                        </div>
+                        <div class="commit-entry">
+                            <div class="commit-hash">commit b2c3d4e5f6a1</div>
+                            <div class="commit-author">Author: John Doe &lt;john@example.com&gt;</div>
+                            <div class="commit-date">Date: 2024-11-24 09:15:00</div>
+                            <br>
+                            <div style="padding-left: 20px;">Added authentication feature</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialize Modal -->
+    <div class="modal" id="initModal">
+        <div class="modal-content">
+            <h2>Initialize Repository</h2>
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="userName" placeholder="John Doe">
+            </div>
+            <div class="input-group">
+                <label>Your Email</label>
+                <input type="email" id="userEmail" placeholder="john@example.com">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('initModal')">Cancel</button>
+                <button class="btn btn-init" onclick="confirmInit()">Initialize</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commit Modal -->
+    <div class="modal" id="commitModal">
+        <div class="modal-content">
+            <h2>Commit Changes</h2>
+            <div class="input-group">
+                <label>Commit Message</label>
+                <textarea id="commitMessage" rows="4" placeholder="Enter commit message..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('commitModal')">Cancel</button>
+                <button class="btn btn-commit" onclick="confirmCommit()">Commit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branch Modal -->
+    <div class="modal" id="branchModal">
+        <div class="modal-content">
+            <h2>Branch Management</h2>
+            <div class="input-group">
+                <label>Current Branches</label>
+                <div class="branch-list">
+                    <div class="branch-item current">* main</div>
+                    <div class="branch-item">feature-auth</div>
+                    <div class="branch-item">develop</div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Create New Branch</label>
+                <input type="text" id="newBranchName" placeholder="feature-name">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('branchModal')">Close</button>
+                <button class="btn btn-branch" onclick="createBranch()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = new Set();
+        let repoInitialized = false;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = message;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 3000);
+        }
+
+        function initRepository() {
+            document.getElementById('initModal').classList.add('active');
+        }
+
+        function confirmInit() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            
+            if (name && email) {
+                repoInitialized = true;
+                document.getElementById('branchIndicator').textContent = '📍 Branch: main';
+                ['addBtn', 'commitBtn', 'branchBtn', 'logBtn', 'refreshBtn'].forEach(id => {
+                    document.getElementById(id).disabled = false;
+                });
+                closeModal('initModal');
+                showSuccess('✅ Repository initialized successfully!');
+            } else {
+                alert('Please fill in all fields!');
+            }
+        }
+
+        function addFiles() {
+            if (!repoInitialized) return;
+            if (selectedFiles.size === 0) {
+                alert('Please select files first by clicking on them!');
+                return;
+            }
+            showSuccess(`✅ Added ${selectedFiles.size} file(s) to staging area`);
+        }
+
+        function showCommitModal() {
+            if (!repoInitialized) return;
+            document.getElementById('commitModal').classList.add('active');
+        }
+
+        function confirmCommit() {
+            const message = document.getElementById('commitMessage').value;
+            if (message) {
+                closeModal('commitModal');
+                showSuccess('✅ Commit successful: ' + message);
+                document.getElementById('commitMessage').value = '';
+            } else {
+                alert('Please enter a commit message!');
+            }
+        }
+
+        function showBranchModal() {
+            if (!repoInitialized) return;
+            document.getElementById('branchModal').classList.add('active');
+        }
+
+        function createBranch() {
+            const branchName = document.getElementById('newBranchName').value;
+            if (branchName) {
+                closeModal('branchModal');
+                showSuccess('✅ Created branch: ' + branchName);
+                document.getElementById('newBranchName').value = '';
+            } else {
+                alert('Please enter a branch name!');
+            }
+        }
+
+        function viewLog() {
+            switchTab('log');
+        }
+
+        function refreshView() {
+            showSuccess('🔄 View refreshed');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.onclick = function() {
+                this.classList.toggle('selected');
+                const fileName = this.textContent.trim();
+                if (this.classList.contains('selected')) {
+                    selectedFiles.add(fileName);
+                } else {
+                    selectedFiles.delete(fileName);
+                }
+            };
+        });
+
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.onclick = function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            };
+        });
+    </script>
+</body>
+</html>

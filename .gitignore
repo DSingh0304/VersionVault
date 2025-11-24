@@ -1,0 +1,13 @@
+build/
+bin/
+*.class
+*.o
+*.so
+*.dylib
+*.dll
+.vv/
+vv
+*.swp
+*.swo
+*~
+.DS_Store
