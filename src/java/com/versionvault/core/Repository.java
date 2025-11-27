@@ -11,6 +11,7 @@ public class Repository {
     private CommitHistory commitHistory;
     private StagingArea stagingArea;
     private User currentUser;
+    private ObjectStore objectStore;
 
     public Repository(String path) throws RepositoryException {
         this.rootPath = path;
@@ -18,6 +19,7 @@ public class Repository {
         this.commitHistory = new CommitHistory(this);
         this.branchManager = new BranchManager(this);
         this.stagingArea = new StagingArea(this);
+        this.objectStore = new ObjectStore(this);
     }
 
     public void initialize() throws RepositoryException {
@@ -108,5 +110,9 @@ public class Repository {
 
     public StagingArea getStagingArea() {
         return stagingArea;
+    }
+
+    public ObjectStore getObjectStore() {
+        return objectStore;
     }
 }

@@ -54,8 +54,34 @@ public class BranchManager {
             throw new RepositoryException("Branch does not exist: " + name);
         }
 
-        currentBranch = branches.get(name);
+        Branch targetBranch = branches.get(name);
+        String commitHash = targetBranch.getCurrentCommit();
+
+        if (commitHash != null) {
+            restoreWorkingTree(commitHash);
+        }
+
+        currentBranch = targetBranch;
         updateHEAD();
+    }
+
+    private void restoreWorkingTree(String commitHash) throws RepositoryException {
+        Commit commit = repository.getCommitHistory().getCommit(commitHash);
+        if (commit == null) {
+            throw new RepositoryException("Commit not found: " + commitHash);
+        }
+
+        Map<String, String> files = commit.getFileHashes();
+        for (Map.Entry<String, String> entry : files.entrySet()) {
+            String path = entry.getKey();
+            String hash = entry.getValue();
+
+            try {
+                repository.getObjectStore().restoreBlob(hash, Paths.get(repository.getRootPath(), path));
+            } catch (IOException e) {
+                System.err.println("Failed to restore file " + path + ": " + e.getMessage());
+            }
+        }
     }
 
     public Branch getCurrentBranch() {
