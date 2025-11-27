@@ -8,39 +8,39 @@ public class BranchManager {
     private Repository repository;
     private Map<String, Branch> branches;
     private Branch currentBranch;
-    
+
     public BranchManager(Repository repo) {
         this.repository = repo;
         this.branches = new HashMap<>();
         loadBranches();
     }
-    
+
     public void createBranch(String name) throws RepositoryException {
         if (branches.containsKey(name)) {
             throw new RepositoryException("Branch already exists: " + name);
         }
-        
+
         Branch branch = new Branch(name);
-        
+
         if (currentBranch != null && currentBranch.getCurrentCommit() != null) {
             branch.setCurrentCommit(currentBranch.getCurrentCommit());
         }
-        
+
         branches.put(name, branch);
         saveBranch(branch);
     }
-    
+
     public void deleteBranch(String name) throws RepositoryException {
         if (currentBranch != null && currentBranch.getName().equals(name)) {
             throw new RepositoryException("Cannot delete current branch");
         }
-        
+
         if (!branches.containsKey(name)) {
             throw new RepositoryException("Branch does not exist: " + name);
         }
-        
+
         branches.remove(name);
-        
+
         try {
             Path branchFile = Paths.get(repository.getVVPath(), "refs", "heads", name);
             Files.deleteIfExists(branchFile);
@@ -48,28 +48,28 @@ public class BranchManager {
             throw new RepositoryException("Failed to delete branch file", e);
         }
     }
-    
+
     public void checkout(String name) throws RepositoryException {
         if (!branches.containsKey(name)) {
             throw new RepositoryException("Branch does not exist: " + name);
         }
-        
+
         currentBranch = branches.get(name);
         updateHEAD();
     }
-    
+
     public Branch getCurrentBranch() {
         return currentBranch;
     }
-    
+
     public List<Branch> listBranches() {
         return new ArrayList<>(branches.values());
     }
-    
+
     public Branch getBranch(String name) {
         return branches.get(name);
     }
-    
+
     public void updateCurrentBranchCommit(String commitHash) {
         if (currentBranch != null) {
             currentBranch.setCurrentCommit(commitHash);
@@ -77,47 +77,46 @@ public class BranchManager {
             updateHEAD();
         }
     }
-    
+
     private void saveBranch(Branch branch) {
         try {
             Path branchFile = Paths.get(repository.getVVPath(), "refs", "heads", branch.getName());
             Files.createDirectories(branchFile.getParent());
-            
-            if (branch.getCurrentCommit() != null) {
-                Files.writeString(branchFile, branch.getCurrentCommit());
-            }
+
+            String commitHash = branch.getCurrentCommit();
+            Files.writeString(branchFile, commitHash != null ? commitHash : "");
         } catch (IOException e) {
             throw new RuntimeException("Failed to save branch", e);
         }
     }
-    
+
     private void loadBranches() {
         Path headsPath = Paths.get(repository.getVVPath(), "refs", "heads");
         if (!Files.exists(headsPath)) {
             return;
         }
-        
+
         try {
             Files.walk(headsPath, 1)
-                .filter(Files::isRegularFile)
-                .forEach(file -> {
-                    try {
-                        String name = file.getFileName().toString();
-                        String commitHash = Files.readString(file).trim();
-                        
-                        Branch branch = new Branch(name);
-                        branch.setCurrentCommit(commitHash);
-                        branches.put(name, branch);
-                        
-                    } catch (IOException e) {
-                    }
-                });
+                    .filter(Files::isRegularFile)
+                    .forEach(file -> {
+                        try {
+                            String name = file.getFileName().toString();
+                            String commitHash = Files.readString(file).trim();
+
+                            Branch branch = new Branch(name);
+                            branch.setCurrentCommit(commitHash);
+                            branches.put(name, branch);
+
+                        } catch (IOException e) {
+                        }
+                    });
         } catch (IOException e) {
         }
-        
+
         loadCurrentBranch();
     }
-    
+
     private void loadCurrentBranch() {
         Path headFile = Paths.get(repository.getVVPath(), "HEAD");
         if (Files.exists(headFile)) {
@@ -131,7 +130,7 @@ public class BranchManager {
             }
         }
     }
-    
+
     private void updateHEAD() {
         try {
             Path headFile = Paths.get(repository.getVVPath(), "HEAD");

@@ -1,3 +1,2 @@
 #!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-java -cp "$SCRIPT_DIR/bin" com.versionvault.gui.VersionVaultGUI "$@"
+java -cp bin com.versionvault.gui.VersionVaultGUI "$@"
