@@ -1,4 +1,4 @@
-package java.com.versionvault.core;
+package com.versionvault.core;
 
 import java.io.*;
 import java.nio.file.*;
