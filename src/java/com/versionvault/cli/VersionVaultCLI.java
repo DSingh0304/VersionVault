@@ -123,6 +123,8 @@ class CommandFactory {
                 return new LogCommand(repo, args);
             case "status":
                 return new StatusCommand(repo, args);
+            case "rm":
+                return new RmCommand(repo, args);
             case "lock":
                 return new LockCommand(repo, args);
             case "unlock":
@@ -395,6 +397,29 @@ class StatusCommand implements Command {
             hasChanges = true;
         }
 
+        // Check for deleted files
+        List<String> deleted = new ArrayList<>();
+        if (current != null && current.getCurrentCommit() != null) {
+            Commit head = repo.getCommitHistory().getCommit(current.getCurrentCommit());
+            if (head != null) {
+                for (String trackedFile : head.getFileHashes().keySet()) {
+                    Path filePath = Paths.get(repo.getRootPath(), trackedFile);
+                    if (!Files.exists(filePath)) {
+                        deleted.add(trackedFile);
+                    }
+                }
+            }
+        }
+
+        if (!deleted.isEmpty()) {
+            System.out.println("\nChanges not staged for commit:");
+            System.out.println("  (use \"vv add/rm <file>...\" to update what will be committed)");
+            for (String file : deleted) {
+                System.out.println("    deleted: " + file);
+            }
+            hasChanges = true;
+        }
+
         if (!hasChanges) {
             System.out.println("\nNothing to commit, working tree clean");
         }
@@ -450,5 +475,27 @@ class UnlockCommand implements Command {
         lockManager.releaseLock(file, user, false);
 
         System.out.println("Unlocked " + file);
+    }
+}
+
+class RmCommand implements Command {
+    private Repository repo;
+    private String[] args;
+
+    public RmCommand(Repository repo, String[] args) {
+        this.repo = repo;
+        this.args = args;
+    }
+
+    @Override
+    public void execute() throws Exception {
+        if (args.length < 2) {
+            System.err.println("Usage: vv rm <file>");
+            return;
+        }
+
+        String file = args[1];
+        repo.getStagingArea().removeFile(file);
+        System.out.println("Removed " + file);
     }
 }

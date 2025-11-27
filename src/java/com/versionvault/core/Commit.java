@@ -45,6 +45,10 @@ public class Commit implements Cloneable {
         this.fileHashes.put(path, fileHash);
     }
 
+    public void removeFile(String path) {
+        this.fileHashes.remove(path);
+    }
+
     public String calculateHash() {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

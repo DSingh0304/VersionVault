@@ -28,13 +28,27 @@ public class CommitOperation extends VaultOperation {
 
         Branch currentBranch = repository.getBranchManager().getCurrentBranch();
         if (currentBranch != null && currentBranch.getCurrentCommit() != null) {
-            commit.addParent(currentBranch.getCurrentCommit());
+            String parentHash = currentBranch.getCurrentCommit();
+            commit.addParent(parentHash);
+
+            // Copy files from parent commit
+            Commit parent = repository.getCommitHistory().getCommit(parentHash);
+            if (parent != null) {
+                Map<String, String> parentFiles = parent.getFileHashes();
+                for (Map.Entry<String, String> entry : parentFiles.entrySet()) {
+                    commit.addFile(entry.getKey(), entry.getValue());
+                }
+            }
         }
 
         for (Map.Entry<String, StagedFile> entry : staging.getStagedFiles().entrySet()) {
             String path = entry.getKey();
             String fileHash = hashFile(path);
             commit.addFile(path, fileHash);
+        }
+
+        for (String removedPath : staging.getRemovedFiles()) {
+            commit.removeFile(removedPath);
         }
 
         commit.calculateHash();
